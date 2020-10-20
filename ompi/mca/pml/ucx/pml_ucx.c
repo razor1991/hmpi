@@ -5,6 +5,7 @@
  *                         reserved.
  * Copyright (c) 2018      Research Organization for Information Science
  *                         and Technology (RIST).  All rights reserved.
+ * Copyright (c) 2020      Huawei Technologies Co., Ltd.  All rights reserved.
  * $COPYRIGHT$
  *
  * Additional copyrights may follow
@@ -668,7 +669,7 @@ int mca_pml_ucx_isend_init(const void *buf, size_t count, ompi_datatype_t *datat
 }
 
 static ucs_status_ptr_t
-mca_pml_ucx_bsend(ucp_ep_h ep, const void *buf, size_t count, 
+mca_pml_ucx_bsend(ucp_ep_h ep, const void *buf, size_t count,
                   ompi_datatype_t *datatype, uint64_t pml_tag)
 {
     ompi_request_t *req;
@@ -797,7 +798,8 @@ mca_pml_ucx_send_nb(ucp_ep_h ep, const void *buf, size_t count,
         return OMPI_SUCCESS;
     } else if (!UCS_PTR_IS_ERR(req)) {
         PML_UCX_VERBOSE(8, "got request %p", (void*)req);
-        MCA_COMMON_UCX_WAIT_LOOP(req, ompi_pml_ucx.ucp_worker, "ucx send", ompi_request_free(&req));
+        MCA_COMMON_UCX_WAIT_LOOP(req, OPAL_COMMON_UCX_REQUEST_TYPE_UCP, ompi_pml_ucx.ucp_worker, "ucx send",
+            ompi_request_free(&req));
     } else {
         PML_UCX_ERROR("ucx send failed: %s", ucs_status_string(UCS_PTR_STATUS(req)));
         return OMPI_ERROR;
@@ -820,7 +822,7 @@ mca_pml_ucx_send_nbr(ucp_ep_h ep, const void *buf, size_t count,
         return OMPI_SUCCESS;
     }
 
-    MCA_COMMON_UCX_WAIT_LOOP(req, ompi_pml_ucx.ucp_worker, "ucx send", (void)0);
+    MCA_COMMON_UCX_WAIT_LOOP(req, OPAL_COMMON_UCX_REQUEST_TYPE_UCP, ompi_pml_ucx.ucp_worker, "ucx send", (void)0);
 }
 #endif
 
