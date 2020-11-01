@@ -46,7 +46,6 @@ AC_DEFUN([OMPI_CHECK_UCX],[
                                              [true])])
                   ompi_check_ucx_happy="no"
                   ompi_check_ucg_happy="no"
-                  ucx_libs="-luct -lucm -lucs"
                   AS_IF([test -z "$ompi_check_ucx_dir"],
                         [OPAL_CHECK_PACKAGE([ompi_check_ucx],
                                    [ucp/api/ucp.h],
@@ -60,8 +59,8 @@ AC_DEFUN([OMPI_CHECK_UCX],[
                          OPAL_CHECK_PACKAGE([ompi_check_ucg],
                                    [ucg/api/ucg.h],
                                    [ucg],
-                                   [ucg_request_check_status],
-                                   [-lucg -lucp $ucx_libs],
+                                   [ucg_collective_destroy],
+                                   [-lucp -luct -lucm -lucs],
                                    [],
                                    [],
                                    [ompi_check_ucg_happy="yes"],
@@ -101,8 +100,8 @@ AC_DEFUN([OMPI_CHECK_UCX],[
                          OPAL_CHECK_PACKAGE([ompi_check_ucg],
                                             [ucg/api/ucg.h],
                                             [ucg],
-                                            [ucg_request_check_status],
-                                            [-lucg -lucp $ucx_libs],
+                                            [ucg_collective_destroy],
+                                            [-lucp -luct -lucm -lucs],
                                             [$ompi_check_ucx_dir],
                                             [$ompi_check_ucx_libdir],
                                             [ompi_check_ucg_happy="yes"],
