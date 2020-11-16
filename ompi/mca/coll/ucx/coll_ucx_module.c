@@ -18,6 +18,7 @@
 
 #include "coll_ucx.h"
 #include "coll_ucx_request.h"
+#include "coll_ucx_datatype.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -223,7 +224,7 @@ static int mca_coll_ucx_init_global_topo(mca_coll_ucx_module_t *module)
         goto end;
     }
 
-    /* Create a topo matrix. As it is Diagonal symmetry， only half of the matrix will be computed. */
+    /* Create a topo matrix. As it is Diagonal symmetryן¼� only half of the matrix will be computed. */
     ret = mca_coll_ucx_create_topo_map(node_index, topo_info, LOC_SIZE, rank_cnt);
     if (ret != OMPI_SUCCESS) {
         status = OMPI_ERROR;
@@ -281,7 +282,7 @@ static int mca_coll_ucx_create_comm_topo(ucg_group_params_t *args, struct ompi_c
         return OMPI_SUCCESS;
     }
 
-    /* Create a topo matrix. As it is Diagonal symmetry， only half of the matrix will be computed. */
+    /* Create a topo matrix. As it is Diagonal symmetryן¼� only half of the matrix will be computed. */
     unsigned i;
     for (i = 0; i < args->member_count; i++) {
         /* Find the rank in the MPI_COMM_WORLD for rank i in the comm. */
@@ -323,6 +324,13 @@ static void mca_coll_ucg_create_distance_array(struct ompi_communicator_t *comm,
     }
 }
 
+static int mca_coll_ucg_datatype_convert(ompi_datatype_t *mpi_dt,
+                                         ucp_datatype_t *ucp_dt)
+{
+    *ucp_dt = mca_coll_ucx_get_datatype(mpi_dt);
+    return 0;
+}
+
 static void mca_coll_ucg_init_group_param(struct ompi_communicator_t *comm, ucg_group_params_t *args)
 {
     args->member_count      = ompi_comm_size(comm);
@@ -332,6 +340,7 @@ static void mca_coll_ucg_init_group_param(struct ompi_communicator_t *comm, ucg_
     args->release_address_f = mca_coll_ucx_release_address;
     args->cb_group_obj      = comm;
     args->op_is_commute_f   = ompi_op_is_commute;
+    args->mpi_dt_convert    = mca_coll_ucg_datatype_convert;
 }
 
 static void mca_coll_ucg_arg_free(struct ompi_communicator_t *comm, ucg_group_params_t *args)
@@ -459,6 +468,26 @@ static int mca_coll_ucx_module_enable(mca_coll_base_module_t *module,
     mca_coll_ucx_module_t *ucx_module = (mca_coll_ucx_module_t*) module;
     int rc;
 
+    if (mca_coll_ucx_component.datatype_attr_keyval == MPI_KEYVAL_INVALID) {
+        /* Create a key for adding custom attributes to datatypes */
+        ompi_attribute_fn_ptr_union_t copy_fn;
+        ompi_attribute_fn_ptr_union_t del_fn;
+        copy_fn.attr_datatype_copy_fn  =
+                        (MPI_Type_internal_copy_attr_function*)MPI_TYPE_NULL_COPY_FN;
+        del_fn.attr_datatype_delete_fn = mca_coll_ucx_datatype_attr_del_fn;
+        rc = ompi_attr_create_keyval(TYPE_ATTR, copy_fn, del_fn,
+                                     &mca_coll_ucx_component.datatype_attr_keyval,
+                                     NULL, 0, NULL);
+        if (rc != OMPI_SUCCESS) {
+            COLL_UCX_ERROR("Failed to create keyval for UCX datatypes: %d", rc);
+            return rc;
+        }
+
+        COLL_UCX_FREELIST_INIT(&mca_coll_ucx_component.convs,
+                               mca_coll_ucx_convertor_t,
+                               128, -1, 128);
+    }
+
     /* prepare the placeholder for the array of request* */
     module->base_data = OBJ_NEW(mca_coll_base_comm_t);
     if (NULL == module->base_data) {
@@ -469,9 +498,6 @@ static int mca_coll_ucx_module_enable(mca_coll_base_module_t *module,
     if (rc != OMPI_SUCCESS) {
         return rc;
     }
-
-    COLL_UCX_FREELIST_INIT(&mca_coll_ucx_component.persistent_ops, mca_coll_ucx_persistent_op_t,
-                           128, -1, 128);
 
     COLL_UCX_VERBOSE(1, "UCX Collectives Module initialized");
     return OMPI_SUCCESS;

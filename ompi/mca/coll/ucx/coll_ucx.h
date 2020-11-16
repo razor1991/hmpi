@@ -26,9 +26,9 @@
 #include "ompi/communicator/communicator.h"
 #include "ompi/datatype/ompi_datatype.h"
 #include "ompi/attribute/attribute.h"
-#include "ompi/op/op.h"
 
 #include "orte/runtime/orte_globals.h"
+#include "ompi/datatype/ompi_datatype_internal.h"
 #include "opal/mca/common/ucx/common_ucx.h"
 
 #include "ucg/api/ucg_mpi.h"
@@ -71,6 +71,13 @@ typedef struct mca_coll_ucx_component {
     mca_coll_ucx_freelist_t   persistent_ops;
     ompi_request_t            completed_send_req;
     size_t                    request_size;
+
+    /* Datatypes */
+    int                       datatype_attr_keyval;
+    ucp_datatype_t            predefined_types[OMPI_DATATYPE_MPI_MAX_PREDEFINED];
+
+    /* Converters pool */
+    mca_coll_ucx_freelist_t   convs;
 } mca_coll_ucx_component_t;
 OMPI_MODULE_DECLSPEC extern mca_coll_ucx_component_t mca_coll_ucx_component;
 

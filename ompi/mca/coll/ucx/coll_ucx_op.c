@@ -17,11 +17,6 @@
 #include "ompi/message/message.h"
 #include <inttypes.h>
 
-static inline int mca_coll_ucx_is_datatype_supported(struct ompi_datatype_t *dtype, int count)
-{
-    return ompi_datatype_is_contiguous_memory_layout(dtype, count);
-}
-
 int mca_coll_ucx_start(size_t count, ompi_request_t** requests)
 {
     mca_coll_ucx_persistent_op_t *preq = NULL;
@@ -96,10 +91,6 @@ int mca_coll_ucx_allreduce(const void *sbuf, void *rbuf, int count,
 {
     mca_coll_ucx_module_t *ucx_module = (mca_coll_ucx_module_t*)module;
 
-    if (ucs_unlikely(!mca_coll_ucx_is_datatype_supported(dtype, count))) {
-        COLL_UCX_ERROR("UCX component does not support discontinuous datatype. Please use other coll component.");
-        return OMPI_ERR_NOT_SUPPORTED;
-    }
     COLL_UCX_TRACE("%s", sbuf, rbuf, count, dtype, comm, "allreduce START");
 
     ucs_status_ptr_t req = COLL_UCX_REQ_ALLOCA(ucx_module);
@@ -418,10 +409,6 @@ int mca_coll_ucx_bcast(void *buff, int count, struct ompi_datatype_t *dtype, int
 {
     mca_coll_ucx_module_t *ucx_module = (mca_coll_ucx_module_t*)module;
 
-    if (ucs_unlikely(!mca_coll_ucx_is_datatype_supported(dtype, count))) {
-        COLL_UCX_ERROR("UCX component does not support discontinuous datatype. Please use other coll component.");
-        return OMPI_ERR_NOT_SUPPORTED;
-    }
     COLL_UCX_TRACE("%s", buff, buff, count, dtype, comm, "bcast");
 
     ucs_status_ptr_t req = COLL_UCX_REQ_ALLOCA(ucx_module);
