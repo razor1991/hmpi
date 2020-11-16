@@ -224,7 +224,7 @@ static int mca_coll_ucx_init_global_topo(mca_coll_ucx_module_t *module)
         goto end;
     }
 
-    /* Create a topo matrix. As it is Diagonal symmetryן¼� only half of the matrix will be computed. */
+    /* Create a topo matrix. As it is Diagonal symmetry, only half of the matrix will be computed. */
     ret = mca_coll_ucx_create_topo_map(node_index, topo_info, LOC_SIZE, rank_cnt);
     if (ret != OMPI_SUCCESS) {
         status = OMPI_ERROR;
@@ -282,7 +282,7 @@ static int mca_coll_ucx_create_comm_topo(ucg_group_params_t *args, struct ompi_c
         return OMPI_SUCCESS;
     }
 
-    /* Create a topo matrix. As it is Diagonal symmetryן¼� only half of the matrix will be computed. */
+    /* Create a topo matrix. As it is Diagonal symmetry, only half of the matrix will be computed. */
     unsigned i;
     for (i = 0; i < args->member_count; i++) {
         /* Find the rank in the MPI_COMM_WORLD for rank i in the comm. */
