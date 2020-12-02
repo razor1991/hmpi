@@ -72,22 +72,29 @@ static size_t coll_ucx_generic_datatype_pack(void *state, size_t offset,
     uint32_t iov_count;
     struct iovec iov;
     size_t length;
-
+    int rc;
+  
     iov_count    = 1;
     iov.iov_base = dest;
     iov.iov_len  = max_length;
 
     opal_convertor_set_position(&convertor->opal_conv, &offset);
     length = max_length;
-    opal_convertor_pack(&convertor->opal_conv, &iov, &iov_count, &length);
-    return length;
+    rc = opal_convertor_pack(&convertor->opal_conv, &iov, &iov_count, &length);
+    if (OPAL_UNLIKELY(rc < 0)) {
+        int err = MPI_ERR_INTERN;
+        COLL_UCX_ERROR("Failed to pack datatype structure");
+        ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to pack datatype structure");
+    } else {
+        return length;
+    }
 }
 
 static ucs_status_t coll_ucx_generic_datatype_unpack(void *state, size_t offset,
                                                      const void *src, size_t length)
 {
     mca_coll_ucx_convertor_t *convertor = state;
-
+    int rc;
     uint32_t iov_count;
     struct iovec iov;
     opal_convertor_t conv;
@@ -106,16 +113,22 @@ static ucs_status_t coll_ucx_generic_datatype_unpack(void *state, size_t offset,
                                                  convertor->opal_conv.pBaseBuf, 0,
                                                  &conv);
         opal_convertor_set_position(&conv, &offset);
-        opal_convertor_unpack(&conv, &iov, &iov_count, &length);
+        rc = opal_convertor_unpack(&conv, &iov, &iov_count, &length);
         opal_convertor_cleanup(&conv);
         OBJ_DESTRUCT(&conv);
         /* permanently switch to un-ordered mode */
         convertor->offset = 0;
     } else {
-        opal_convertor_unpack(&convertor->opal_conv, &iov, &iov_count, &length);
+        rc = opal_convertor_unpack(&convertor->opal_conv, &iov, &iov_count, &length);
         convertor->offset += length;
     }
-    return UCS_OK;
+    if (OPAL_UNLIKELY(rc < 0)) {
+        int err = MPI_ERR_INTERN;
+        COLL_UCX_ERROR("Failed to unpack datatype structure");
+        ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to unpack datatype structure");
+    } else {
+        return UCS_OK;
+    }
 }
 
 static void coll_ucx_generic_datatype_finish(void *state)
@@ -176,9 +189,6 @@ coll_ucx_datatype_t *mca_coll_ucx_init_nbx_datatype(ompi_datatype_t *datatype,
     if (pml_datatype == NULL) {
         int err = MPI_ERR_INTERN;
         COLL_UCX_ERROR("Failed to allocate datatype structure");
-        /* TODO: this error should return to the caller and invoke an error
-         * handler from the MPI API call.
-         * For now, it is fatal. */
         ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to allocate datatype structure");
     }
 
@@ -214,9 +224,6 @@ ucp_datatype_t mca_coll_ucx_init_datatype(ompi_datatype_t *datatype)
     if (status != UCS_OK) {
         int err = MPI_ERR_INTERN;
         COLL_UCX_ERROR("Failed to create UCX datatype for %s", datatype->name);
-        /* TODO: this error should return to the caller and invoke an error
-         * handler from the MPI API call.
-         * For now, it is fatal. */
         ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to allocate datatype structure");
     }
 
@@ -234,9 +241,6 @@ ucp_datatype_t mca_coll_ucx_init_datatype(ompi_datatype_t *datatype)
             int err = MPI_ERR_INTERN;
             COLL_UCX_ERROR("Failed to add UCX datatype attribute for %s (%p): %d",
                            datatype->name, (void*)datatype, ret);
-            /* TODO: this error should return to the caller and invoke an error
-             * handler from the MPI API call.
-             * For now, it is fatal. */
             ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to allocate datatype structure");
         }
     }
