@@ -73,7 +73,7 @@ static size_t coll_ucx_generic_datatype_pack(void *state, size_t offset,
     struct iovec iov;
     size_t length;
     int rc;
-  
+
     iov_count    = 1;
     iov.iov_base = dest;
     iov.iov_len  = max_length;
