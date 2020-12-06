@@ -94,40 +94,62 @@ int mca_coll_ucx_allreduce(const void *sbuf, void *rbuf, int count,
                            struct ompi_communicator_t *comm,
                            mca_coll_base_module_t *module)
 {
-    mca_coll_ucx_module_t *ucx_module = (mca_coll_ucx_module_t*)module;
+    mca_coll_ucx_module_t *ucx_module = (mca_coll_ucx_module_t *)module;
+    char *inplace_buff = NULL;
+    ucg_coll_h coll = NULL;
+    ptrdiff_t extent, dsize, gap = 0;
+    int err;
 
-    if (ucs_unlikely(!mca_coll_ucx_is_datatype_supported(dtype, count))) {
-        COLL_UCX_ERROR("UCX component does not support discontinuous datatype. Please use other coll component.");
-        return OMPI_ERR_NOT_SUPPORTED;
+    dsize = opal_datatype_span(&dtype->super, count, &gap);
+    if (sbuf == MPI_IN_PLACE && dsize != 0) {
+        inplace_buff = (char *)malloc(dsize);
+        if (inplace_buff == NULL) {
+            return OMPI_ERR_OUT_OF_RESOURCE;
+        }
+        sbuf = inplace_buff - gap;
+        err = ompi_datatype_copy_content_same_ddt(dtype, count, (char *)sbuf, (char *)rbuf);
+    } else {
+        err = ompi_datatype_copy_content_same_ddt(dtype, count, (char *)rbuf, (char *)sbuf);
     }
+    if (err != MPI_SUCCESS) {
+        if (inplace_buff != NULL) {
+            free(inplace_buff);
+        }
+        return err;
+    }
+
     COLL_UCX_TRACE("%s", sbuf, rbuf, count, dtype, comm, "allreduce START");
 
     ucs_status_ptr_t req = COLL_UCX_REQ_ALLOCA(ucx_module);
-    ptrdiff_t dtype_size;
-    ucg_coll_h coll = NULL;
-    ompi_datatype_type_extent(dtype, &dtype_size);
-    ucs_status_t ret = ucg_coll_allreduce_init(sbuf, rbuf, count, (size_t)dtype_size, dtype, ucx_module->ucg_group, 0,
+
+    ompi_datatype_type_extent(dtype, &extent);
+    ucs_status_t ret = ucg_coll_allreduce_init(sbuf, rbuf, count, (size_t)extent, dtype, ucx_module->ucg_group, 0,
                                                op, 0, 0, &coll);
     if (OPAL_UNLIKELY(ret != UCS_OK)) {
         COLL_UCX_ERROR("ucx allreduce init failed: %s", ucs_status_string(ret));
-        return OMPI_ERROR;
+        goto exit;
     }
 
     ret = ucg_collective_start_nbr(coll, req);
     if (OPAL_UNLIKELY(UCS_STATUS_IS_ERR(ret))) {
         COLL_UCX_ERROR("ucx allreduce start failed: %s", ucs_status_string(ret));
-        return OMPI_ERROR;
+        goto exit;
     }
 
     if (ucs_unlikely(ret == UCS_OK)) {
-        return OMPI_SUCCESS;
+        goto exit;
     }
 
     ucp_worker_h ucp_worker = mca_coll_ucx_component.ucg_worker;
     MCA_COMMON_UCX_WAIT_LOOP(req, OPAL_COMMON_UCX_REQUEST_TYPE_UCG, ucp_worker, "ucx allreduce", (void)0);
     COLL_UCX_TRACE("%s", sbuf, rbuf, count, dtype, comm, "allreduce END");
 
-    return OMPI_SUCCESS;
+exit:
+    if (inplace_buff != NULL) {
+        free(inplace_buff);
+    }
+
+    return (ret == UCS_OK) ? OMPI_SUCCESS : OMPI_ERROR;
 }
 
 int mca_coll_ucx_iallreduce(const void *sbuf, void *rbuf, int count,
