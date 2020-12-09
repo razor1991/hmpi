@@ -357,14 +357,16 @@ int mca_coll_ucx_init(void)
 
     status = ucg_worker_create(mca_coll_ucx_component.ucg_context, &params, &mca_coll_ucx_component.ucg_worker);
     if (UCS_OK != status) {
-        COLL_UCX_WARN("Failed to create UCG worker");
+        COLL_UCX_WARN("Failed to create UCG worker, automatically select other available and highest "
+                      "priority collective component.");
         rc = OMPI_ERROR;
         goto err;
     }
 
     status = mca_coll_ucx_init_worker();
     if (UCS_OK != status) {
-        COLL_UCX_WARN("Failed to init UCG worker");
+        COLL_UCX_WARN("Failed to init UCG worker, automatically select other available and highest "
+                      "priority collective component.");
         rc = OMPI_ERROR;
         goto err_destroy_worker;
     }
@@ -377,7 +379,8 @@ int mca_coll_ucx_init(void)
 
     rc = opal_progress_register(mca_coll_ucx_progress);
     if (OPAL_SUCCESS != rc) {
-        COLL_UCX_ERROR("Failed to progress register");
+        COLL_UCX_ERROR("Failed to progress register, automatically select other available and highest "
+                       "priority collective component.");
         goto err_destroy_worker;
     }
 
