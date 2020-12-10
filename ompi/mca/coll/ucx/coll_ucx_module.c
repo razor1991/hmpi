@@ -331,6 +331,16 @@ static int mca_coll_ucg_datatype_convert(ompi_datatype_t *mpi_dt,
     return 0;
 }
 
+static ptrdiff_t coll_ucx_datatype_span(void *dt_ext, int count, ptrdiff_t *gap)
+{
+    struct ompi_datatype_t *dtype = (struct ompi_datatype_t *)dt_ext;
+    ptrdiff_t dsize, gp= 0;
+
+    dsize = opal_datatype_span(&dtype->super, count, &gp);
+    *gap = gp;
+    return dsize;
+}
+
 static void mca_coll_ucg_init_group_param(struct ompi_communicator_t *comm, ucg_group_params_t *args)
 {
     args->member_count      = ompi_comm_size(comm);
@@ -341,6 +351,7 @@ static void mca_coll_ucg_init_group_param(struct ompi_communicator_t *comm, ucg_
     args->cb_group_obj      = comm;
     args->op_is_commute_f   = ompi_op_is_commute;
     args->mpi_dt_convert    = mca_coll_ucg_datatype_convert;
+    args->mpi_datatype_span = coll_ucx_datatype_span;
 }
 
 static void mca_coll_ucg_arg_free(struct ompi_communicator_t *comm, ucg_group_params_t *args)
