@@ -144,10 +144,13 @@ int mca_coll_ucx_allreduce(const void *sbuf, void *rbuf, int count,
         return OMPI_ERROR;
     }
 
-    ret = coll_ucx_allreduce_pre_init(dtype, count, sbuf, rbuf, &inplace_buff, &gap);
-    if (ret != UCS_OK) {
-        goto exit;
+    if (count > 0 && extent > 0) {
+        ret = coll_ucx_allreduce_pre_init(dtype, count, sbuf, rbuf, &inplace_buff, &gap);
+        if (ret != UCS_OK) {
+            goto exit;
+        }
     }
+
     sbuf_rel = (inplace_buff == NULL) ? sbuf : inplace_buff - gap;
 
     COLL_UCX_TRACE("%s", sbuf, rbuf, count, dtype, comm, "allreduce START");
