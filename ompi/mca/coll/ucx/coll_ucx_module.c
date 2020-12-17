@@ -206,8 +206,9 @@ static int mca_coll_ucx_init_global_topo(mca_coll_ucx_module_t *module)
 
     ret = ompi_coll_base_allgather_intra_bruck(val, LOC_SIZE, MPI_CHAR, topo_info, LOC_SIZE, MPI_CHAR, MPI_COMM_WORLD, &module->super);
     if (ret != OMPI_SUCCESS) {
-        status = OMPI_ERROR;
-        goto end;
+        int err = MPI_ERR_INTERN;
+        COLL_UCX_ERROR("ompi_coll_base_allgather_intra_bruck failed");
+        ompi_mpi_errors_are_fatal_comm_handler(NULL, &err, "Failed to init topo map");
     }
 
     /* Obtain node index to indicate each 'loc' belongs to which node,
