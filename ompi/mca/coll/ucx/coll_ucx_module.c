@@ -381,21 +381,22 @@ static void mca_coll_ucg_arg_free(struct ompi_communicator_t *comm, ucg_group_pa
     }
 }
 
-static void mca_coll_ucg_init_is_socket_balance(ucg_group_params_t *group_params, mca_coll_ucx_module_t *module)
+static void mca_coll_ucg_init_is_socket_balance(ucg_group_params_t *group_params, mca_coll_ucx_module_t *module,
+                                                struct ompi_communicator_t *comm)
 {
     unsigned pps = ucg_builtin_calculate_ppx(group_params, UCG_GROUP_MEMBER_DISTANCE_SOCKET);
     unsigned ppn = ucg_builtin_calculate_ppx(group_params, UCG_GROUP_MEMBER_DISTANCE_HOST);
     char is_socket_balance = (pps == (ppn - pps) || pps == ppn);
     char result = is_socket_balance;
     int status = ompi_coll_base_allreduce_intra_basic_linear(&is_socket_balance, &result, 1, MPI_CHAR, MPI_MIN,
-                                                             MPI_COMM_WORLD, &module->super);
+                                                             comm, &module->super);
     if (status != OMPI_SUCCESS) {
         int error = MPI_ERR_INTERN;
         COLL_UCX_ERROR("ompi_coll_base_allreduce_intra_basic_linear failed");
         ompi_mpi_errors_are_fatal_comm_handler(NULL, &error, "Failed to init is_socket_balance");
     }
     group_params->is_socket_balance = result;
-    return ;
+    return;
 }
 
 static int mca_coll_ucg_create(mca_coll_ucx_module_t *module, struct ompi_communicator_t *comm)
@@ -471,7 +472,7 @@ static int mca_coll_ucg_create(mca_coll_ucx_module_t *module, struct ompi_commun
         goto out;
     }
  
-    mca_coll_ucg_init_is_socket_balance(&args, module);
+    mca_coll_ucg_init_is_socket_balance(&args, module, comm);
     error = ucg_group_create(mca_coll_ucx_component.ucg_worker, &args, &module->ucg_group);
 
     /* Examine comm_new return value */
