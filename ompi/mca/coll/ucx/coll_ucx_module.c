@@ -346,7 +346,7 @@ static ucg_group_member_index_t mca_coll_ucx_get_global_member_idx(void *cb_grou
                                                                    ucg_group_member_index_t index)
 {
     ompi_communicator_t* comm = (ompi_communicator_t*)cb_group_obj;
-    return (ucg_group_member_index_t)mcacoll_ucx_find_rank_in_comm_world(comm, (int)index);
+    return (ucg_group_member_index_t)mca_coll_ucx_find_rank_in_comm_world(comm, (int)index);
 }
 
 static void mca_coll_ucg_init_group_param(struct ompi_communicator_t *comm, ucg_group_params_t *args)
@@ -535,7 +535,7 @@ static int mca_coll_ucx_module_enable(mca_coll_base_module_t *module,
 
     rc = mca_coll_ucg_create(ucx_module, comm);
     if (rc != OMPI_SUCCESS) {
-        OBJ_REALEASE(module->base_data);
+        OBJ_RELEASE(module->base_data);
         return rc;
     }
 
