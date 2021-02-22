@@ -64,16 +64,16 @@ static uint16_t* mca_coll_ucx_obtain_node_index(struct ompi_communicator_t *comm
         return NULL;
     }
     uint16_t invalid_node_idx = (uint16_t)-1;
-    for(unsigned i = 0; i < member_count; ++i) {
+    for (unsigned i = 0; i < member_count; ++i) {
         node_idx[i] = invalid_node_idx;
     }
 
-    /*get ip address */
+    /* get ip address */
     struct in_addr *ip_address = malloc(sizeof(struct in_addr) * member_count);
     if (ip_address == NULL) {
         goto err_free_node_idx;
     }
-    for(unsigned i = 0; i < member_count; ++i) {
+    for (unsigned i = 0; i < member_count; ++i) {
         ompi_proc_t *rank = ompi_comm_peer_lookup(comm, i);
         status = mca_coll_ucx_obtain_addr_from_hostname(rank->super.proc_hostname,
                                                         ip_address + i);
@@ -88,8 +88,8 @@ static uint16_t* mca_coll_ucx_obtain_node_index(struct ompi_communicator_t *comm
         if (node_idx[i] == invalid_node_idx) {
             node_idx[i] = last_node_idx;
             /* find the node with same ipaddr, assign the same node idx */
-            for (unsigned j = i+1; j < member_count; ++j) {
-                if (0 == memcmp(&ip_address[i], &ip_address[j], sizeof(struct in_addr))) {
+            for (unsigned j = i + 1; j < member_count; ++j) {
+                if (memcmp(&ip_address[i], &ip_address[j], sizeof(struct in_addr)) == 0) {
                     node_idx[j] = last_node_idx;
                 }
             }
@@ -267,7 +267,7 @@ static int mca_coll_ucx_create_global_topo_map(mca_coll_ucx_module_t *module,
     if (mca_coll_ucx_component.topo_map != NULL) {
         return OMPI_SUCCESS;
     }
-    /*get my locality string*/
+    /* get my locality string */
     int ret;
     char *locality = NULL;
     OPAL_MODEX_RECV_VALUE_OPTIONAL(ret, OPAL_PMIX_LOCALITY_STRING,
@@ -391,8 +391,14 @@ static void mca_coll_ucg_init_is_socket_balance(ucg_group_params_t *group_params
     unsigned ppn = ucg_builtin_calculate_ppx(group_params, UCG_GROUP_MEMBER_DISTANCE_HOST);
     char is_socket_balance = (pps == (ppn - pps) || pps == ppn);
     char result = is_socket_balance;
-    int status = ompi_coll_base_allreduce_intra_basic_linear(&is_socket_balance, &result, 1, MPI_CHAR, MPI_MIN,
-                                                             comm, &module->super);
+    int status = ompi_coll_base_barrier_intra_basic_linear(comm, &module->super);
+    if (status != OMPI_SUCCESS) {
+        int error = MPI_ERR_INTERN;
+        COLL_UCX_ERROR("ompi_coll_base_barrier_intra_basic_linear failed");
+        ompi_mpi_errors_are_fatal_comm_handler(NULL, &error, "Failed to init is_socket_balance");
+    }
+    status = ompi_coll_base_allreduce_intra_basic_linear(&is_socket_balance, &result, 1, MPI_CHAR, MPI_MIN,
+                                                         comm, &module->super);
     if (status != OMPI_SUCCESS) {
         int error = MPI_ERR_INTERN;
         COLL_UCX_ERROR("ompi_coll_base_allreduce_intra_basic_linear failed");

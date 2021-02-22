@@ -197,9 +197,8 @@ static int mca_coll_ucg_datatype_convert(ompi_datatype_t *mpi_dt,
 static ptrdiff_t coll_ucx_datatype_span(void *dt_ext, int count, ptrdiff_t *gap)
 {
     struct ompi_datatype_t *dtype = (struct ompi_datatype_t *)dt_ext;
-    ptrdiff_t dsize, gp= 0;
-
-    dsize = opal_datatype_span(&dtype->super, count, &gp);
+    ptrdiff_t gp = 0;
+    ptrdiff_t dsize = opal_datatype_span(&dtype->super, count, &gp);
     *gap = gp;
     return dsize;
 }
@@ -326,7 +325,7 @@ static int mca_coll_ucx_check_worker()
     if (UCS_OK != status) {
         COLL_UCX_ERROR("Failed to query UCP worker thread mode, %s", ucs_status_string(status));
         return OMPI_ERROR;
-     }
+    }
 
     /* UCX does not support multithreading, disqualify current PML for now */
     if (ompi_mpi_thread_multiple && (attr.thread_mode != UCS_THREAD_MODE_MULTI)) {
